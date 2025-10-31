@@ -1,6 +1,7 @@
 import { Router } from "express";
-import upload, { UploadFile, DeleteFile } from "../middleware/file";
+import upload, { UploadFile, DeleteFile, handleMulterError } from "../middleware/file";
 import { checkLogs, isAdmin, isLoggedIn } from "../middleware/auth";
+import { globalLogger } from "../utils/Logger";
 
 const router = Router();
 
@@ -9,7 +10,7 @@ const router = Router();
 router
   .route("/")
   .all(checkLogs, isLoggedIn, isAdmin)
-  .post(upload.single("file"), UploadFile)
+  .post(upload.single("file"), handleMulterError, UploadFile)
   .delete(DeleteFile);
-console.log("🗃️ Files upload is on");
+globalLogger.info("🗃️ Files upload is on");
 export default router;

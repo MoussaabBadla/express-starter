@@ -134,3 +134,6 @@ out
 storage-secret.json
 
 ```
+
+/.claude
+/media/uploads

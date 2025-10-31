@@ -30,9 +30,19 @@ export function RandomString() {
 
 export function getCookiesSettings(stay: boolean = false): CookieOptions {
 	return {
-		sameSite: "none",
-		secure: true,
+		sameSite: "lax",
+		secure: process.env.NODE_ENV === "production",
 		httpOnly: true,
-		...(stay ? { expires: new Date(new Date().getTime() + (720000000 * 4)) } : {}),
+		...(stay ? { maxAge: 15 * 60 * 1000 } : { maxAge: 15 * 60 * 1000 }), // 15 minutes
+	};
+}
+
+export function getRefreshCookieSettings(stay: boolean = false): CookieOptions {
+	return {
+		sameSite: "lax",
+		secure: process.env.NODE_ENV === "production",
+		httpOnly: true,
+		path: "/auth/refresh", // Refresh token only sent to refresh endpoint
+		...(stay ? { maxAge: 7 * 24 * 60 * 60 * 1000 } : { maxAge: 24 * 60 * 60 * 1000 }), // 7 days if stay, 1 day otherwise
 	};
 }

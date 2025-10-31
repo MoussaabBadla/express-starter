@@ -1,0 +1,17 @@
+FROM node:20-alpine
+
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /home/node/app
+
+RUN mkdir -p logs && chown -R node:node logs
+USER node
+COPY --chown=node:node package*.json ./
+RUN npm install && npm cache clean --force
+COPY --chown=node:node . .
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:8080/health/live', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
+
+CMD ["npm", "run", "dev"]

@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
-import { MONGODB_NAME, MONGODB_URI } from "./config/CheckableEnv";
+import { MONGODB_NAME, MONGODB_URI, InDev } from "./config/Env";
 import { exitProcess } from "./utils/Process";
 import { ExitCodes } from "./config/Errors";
 import { setTimeout } from "timers/promises";
-import { InDev } from "./config/Env";
-import { log } from "./utils/Function";
+import { globalLogger } from "./utils/Logger";
+import { redisClient, disconnectRedis } from "./config/redis";
 
 if (InDev) mongoose.set("debug", true);
 
@@ -15,14 +15,15 @@ if (InDev) mongoose.set("debug", true);
 export const db = mongoose
 	.connect(MONGODB_URI, { dbName:MONGODB_NAME })
 	.then(async () => {
-			
-		log(`🗄️  ==> '${MONGODB_NAME}' DB is Connected.`);
+		globalLogger.info(`🗄️  ==> '${MONGODB_NAME}' DB is Connected.`);
 	})
 	.catch((err) => {
-		console.log(err);
-		
+		globalLogger.error("MongoDB connection error", err);
 	});
-mongoose.connection.on("error", (err) => {});
+
+mongoose.connection.on("error", (err) => {
+	globalLogger.error("MongoDB connection error", err);
+});
 
 /**
  * System class for managing application startup and error handling.
@@ -44,11 +45,14 @@ export default class System {
 	 */
 	static async Start() {
 		await db;
-		
+		await redisClient.ping();
+		globalLogger.info("🔴 Redis connection verified.");
 	}
 
 	static async Stop() {
+		await disconnectRedis();
 		await mongoose.disconnect();
+		globalLogger.info("🛑 All connections closed successfully.");
 	}
 
 }

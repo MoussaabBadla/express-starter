@@ -10,6 +10,13 @@ declare interface UserI  extends UserAuthI{
 	lastName: string;
     role: "admin" | "user" ;
     enable: boolean;
+	emailVerified: boolean;
+	verificationToken?: string;
+	verificationTokenExpires?: Date;
+	accountStatus: 'active' | 'locked' | 'deleted';
+	lockedAt?: Date;
+	lockedReason?: string;
+	deletedAt?: Date;
 }
 
 

@@ -4,6 +4,7 @@ module.exports = {
     testEnvironment: "node",
   
     moduleNameMapper: {
+      "^@/(.*)$": "<rootDir>/src/$1",
       "^@App/(.*)$": "./src/$1",
       "^@Test/(.*)$": "./src/test/$1",
     },

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { InDev } from "../config/Env";
 import { ExitCodes, HttpCodes } from "../config/Errors";
+import { globalLogger } from "./Logger";
 
 export function getErrorMessageByCode(code: number): string | undefined {
     for (const key in ExitCodes) {
@@ -66,14 +67,18 @@ export class AppHttpError extends AppError {
  * 
  */
 
-export function errorMiddleware(error: AppError, req: Request, res: Response,) {
+export function errorMiddleware(error: AppError, _req: Request, res: Response, _next: Function) {
     const status = error.statusCode || HttpCodes.InternalServerError.code;
     const message = error.message || HttpCodes.InternalServerError.message;
     const errorDetails = InDev ? error : undefined;
-    
+
+    // Log error for monitoring
+    globalLogger.error(`[Error] ${status} - ${message}`, InDev ? error.stack : '');
+
   return res.status(status).json({
-        status,
+        status: "error",
         message,
-        error: errorDetails,
+        code: status,
+        ...(errorDetails && { error: errorDetails }),
     });
 }

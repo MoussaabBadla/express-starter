@@ -80,20 +80,50 @@ export const UploadFile = async (req: Request, res: Response) => {
  *  @description  Delete a file
  */
 // same thing here
-export const DeleteFile = (req: Request, res: Response, next: NextFunction) => {
-	const { name } = req.body;
-	const p = path.join(StaticRoot, "uploads", name);
-	fs.unlink(p)
-		.then(() => {
-			res.json({
-				name: "Deleting File",
-				message: "File has been deleted",
-			});
-		})
-		.catch((e) => {
-			next({ name: "Deleting File", message: e.message });
-		});
+export const DeleteFile = async (req: Request, res: Response, next: NextFunction) => {
+	try {
+		const { name, location } = req.body;
+
+		if (!name) {
+			return ErrorResponse(res, HttpCodes.BadRequest.code, "File name is required");
+		}
+
+		// Support both direct filename and filename with location
+		const filePath = location
+			? path.join(StaticRoot, "uploads", location, name)
+			: path.join(StaticRoot, "uploads", name);
+
+		await fs.unlink(filePath);
+
+		return SuccessResponse(
+			res,
+			HttpCodes.OK.code,
+			{ name, deleted: true },
+			`File ${name} has been deleted`
+		);
+	} catch (e: any) {
+		if (e.code === 'ENOENT') {
+			return ErrorResponse(res, HttpCodes.NotFound.code, "File not found");
+		}
+		return ErrorResponse(res, HttpCodes.InternalServerError.code, e.message);
+	}
 };
 
 const upload = multer({ storage: fileStorage, fileFilter: fileFilter });
+
+/**
+ * @description Multer error handling middleware
+ * Catches errors thrown by Multer (file filter, size limits, etc.)
+ */
+export const handleMulterError = (err: any, req: Request, res: Response, next: NextFunction) => {
+	if (err) {
+		// Multer errors
+		if (err.message) {
+			return ErrorResponse(res, HttpCodes.BadRequest.code, err.message);
+		}
+		return ErrorResponse(res, HttpCodes.BadRequest.code, "File upload error");
+	}
+	next();
+};
+
 export default upload;

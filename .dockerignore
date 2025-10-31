@@ -1,3 +1,15 @@
 node_modules
 dist
 logs
+.git
+.gitignore
+.env
+.env.*
+*.md
+.vscode
+.idea
+coverage
+*.log
+npm-debug.log*
+.DS_Store
+.docker

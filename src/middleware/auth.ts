@@ -2,9 +2,10 @@ import { NextFunction, Request, Response } from "express";
 import { MyRequest, UsersTypes } from "../types/Express";
 import { ErrorResponse } from "../utils/Response";
 import { HttpCodes } from "../config/Errors";
-import { Verify } from "../utils/jwt";
-import { authLogs } from "../services/auth/auth.logs";
+import { VerifyAccessToken } from "../utils/jwt";
+import authLogs, { authLogger } from "../services/auth/auth.logs";
 import  {UserModel, UserD } from "../db/models/user";
+import { isTokenBlacklisted, areAllUserTokensBlacklisted } from "../utils/tokenBlacklist";
 
 
 
@@ -43,7 +44,19 @@ export const checkLogs = async (req: MyRequest<null | UsersTypes>, res: Response
 	req.user = null;
 	if (token) {
 		try {
-			const payload = Verify(token);
+			// Check if token is blacklisted
+			const isBlacklisted = await isTokenBlacklisted(token);
+			if (isBlacklisted) {
+				authLogger.warn("Attempt to use blacklisted token");
+				return ErrorResponse(
+					res,
+					HttpCodes.Unauthorized.code,
+					"Token has been revoked",
+					{ type: "TOKEN_BLACKLISTED" }
+				);
+			}
+
+			const payload = VerifyAccessToken(token);
 			if (!payload || !payload._id || !payload.role)
 				return ErrorResponse(
 					res,
@@ -53,9 +66,21 @@ export const checkLogs = async (req: MyRequest<null | UsersTypes>, res: Response
 				);
 			const { _id } = payload;
 
+			// Check if all user tokens are blacklisted (security event)
+			const allUserTokensBlacklisted = await areAllUserTokensBlacklisted(_id);
+			if (allUserTokensBlacklisted) {
+				authLogger.warn(`All tokens blacklisted for user: ${_id}`);
+				return ErrorResponse(
+					res,
+					HttpCodes.Unauthorized.code,
+					"All user sessions have been revoked for security reasons",
+					{ type: "ALL_TOKENS_REVOKED" }
+				);
+			}
+
 			const user = await UserModel.findOne({ _id, });
 			if (!user) {
-				// TODO : Log details for security
+				authLogger.warn(`Token used for non-existent user: ${_id}`);
 				return ErrorResponse(
 					res,
 					HttpCodes.Unauthorized.code,
@@ -65,7 +90,9 @@ export const checkLogs = async (req: MyRequest<null | UsersTypes>, res: Response
 			}
 			req.user = user;
 		} catch (e) {
-			return ErrorResponse(res, HttpCodes.InternalServerError.code, authLogs.ERROR_WHILE_CHECKING_CREDENTIALS.message, e);
+			const error = e as Error;
+			authLogger.error(`Token verification failed: ${error.message}`);
+			return ErrorResponse(res, HttpCodes.Unauthorized.code, error.message || authLogs.ERROR_WHILE_CHECKING_CREDENTIALS.message, e);
 		}
 	}
 
@@ -86,7 +113,7 @@ export const checkLogs = async (req: MyRequest<null | UsersTypes>, res: Response
 export const isAdmin = (req: MyRequest<UserD>, res: Response, next: NextFunction) => {
 	const user = req.user as UserD;
 	if (user.role === "admin") return next();
-	ErrorResponse(res, HttpCodes.Unauthorized.code, authLogs.USER_ISN_T_ADMIN.message, authLogs.USER_ISN_T_ADMIN);
+	return ErrorResponse(res, HttpCodes.Unauthorized.code, authLogs.USER_ISN_T_ADMIN.message, authLogs.USER_ISN_T_ADMIN);
 };
 
 
@@ -105,7 +132,7 @@ export const isAdmin = (req: MyRequest<UserD>, res: Response, next: NextFunction
 export const isUser = (req: MyRequest<UserD>, res: Response, next: NextFunction) => {
 	const user = req.user as UserD;
 	if (user.role === "user") return next();
-	ErrorResponse(res, HttpCodes.Unauthorized.code, authLogs.USER_ISN_T_USER.message, authLogs.USER_ISN_T_USER);
+	return ErrorResponse(res, HttpCodes.Unauthorized.code, authLogs.USER_ISN_T_USER.message, authLogs.USER_ISN_T_USER);
 }
 
 /**
@@ -124,5 +151,5 @@ export const isLoggedIn = (req: MyRequest<UsersTypes>, res: Response, next: Next
 		if (req.user.enable) return next();
 		return ErrorResponse(res, HttpCodes.Unauthorized.code, authLogs.USER_ISN_T_ENABLED.message, authLogs.USER_ISN_T_ENABLED);
 	}
-	ErrorResponse(res, HttpCodes.Unauthorized.code, authLogs.USER_ISN_T_LOGGED.message, authLogs.USER_ISN_T_LOGGED);
+	return ErrorResponse(res, HttpCodes.Unauthorized.code, authLogs.USER_ISN_T_LOGGED.message, authLogs.USER_ISN_T_LOGGED);
 };

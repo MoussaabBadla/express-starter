@@ -11,6 +11,7 @@ export interface MyRequest<
 	Locals extends Record<string, any> = Record<string, any>
 > extends Request<Params, ResBody, ReqBody, ReqQuery, Locals> {
 	user?: Req extends UsersTypes ? Req : Req | null;
+	correlationId?: string;
 }
 
 

@@ -1,5 +1,6 @@
 import winston, { Logform } from "winston";
 import path from "path";
+import fs from "fs";
 import { subDays } from "date-fns";
 import { InDev, LogsRoot, InTest } from "../config/Env";
 import { log } from "./Function";
@@ -7,12 +8,21 @@ import { log } from "./Function";
 const printf = (info: Logform.TransformableInfo) => {
     const errorCode = info.code ? ` | ${info.code}` : "";
     const logType = info.type ? ` | ${info.type}` : "";
-    return `${info.timestamp} [${info.level?.toUpperCase()}${logType}${errorCode}]: ${info.message}`;
+    const correlationId = info.correlationId ? ` | CID:${info.correlationId}` : "";
+    return `${info.timestamp} [${info.level?.toUpperCase()}${logType}${errorCode}${correlationId}]: ${info.message}`;
 };
 
 export default class Logger {
     private logger: winston.Logger;
     constructor(model: string, defaultFormat: (info: Logform.TransformableInfo) => string = printf) {
+        // Ensure logs directory exists
+        try {
+            if (!fs.existsSync(LogsRoot)) {
+                fs.mkdirSync(LogsRoot, { recursive: true });
+            }
+        } catch (error) {
+            console.error(`Failed to create logs directory at ${LogsRoot}:`, error);
+        }
 
         // Create the logger with the defined transports
         this.logger = winston.createLogger({
@@ -89,8 +99,8 @@ export default class Logger {
             });
         } catch (e) {
             globalLogger.error((e as Error).message, { code: 0, type: "Reading Logs" });
+            return null;
         }
-        /* )*/
     }
 
     error(message: string, meta?: any) {

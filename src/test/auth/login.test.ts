@@ -6,6 +6,7 @@ import { authLogs } from "../../services/auth/auth.logs";
 import { StopServer, app } from "../../app";
 import { formatString } from "../../utils/Strings";
 import { RandomEmail, RandomString } from "../../utils/Function";
+import { TEST_PASSWORD } from "../../utils/authUtilsTest";
 
 afterAll(async () => {
   await StopServer();
@@ -26,47 +27,41 @@ describe("Test the Login with valid email and password", () => {
   test("It should response with Success response", async () => {
     const response = await request(app).post(route).send({
       email: "badlamoussaab@gmail.com",
-      password: "password",
+      password: TEST_PASSWORD,
     });
     expect(response.status).toBe(HttpCodes.Accepted.code);
     expect(response.body.status).toBe(authLogs.LOGIN_SUCCESS.type);
     expect(response.body.message).toBe(
       formatString(authLogs.LOGIN_SUCCESS.message, response.body.data)
     );
-    expect(response.body.data).toHaveProperty("token");
+    expect(response.body.data).toHaveProperty("accessToken");
+    expect(response.body.data).toHaveProperty("refreshToken");
   });
 });
 
 describe("Test login with email doesn't exist", () => {
-  test("It should responce with Error response type : LOGIN_ERROR_EMAIL_NOT_FOUND ", async () => {
+  test("It should response with generic error to prevent user enumeration", async () => {
     const email = RandomEmail();
     const response = await request(app).post(route).send({
       email: email,
-      password: "password",
-    });
-    expect(response.status).toBe(HttpCodes.NotFound.code);
-    expect(response.body.status).toBe("error");
-    expect(response.body.message).toBe(
-      authLogs.LOGIN_ERROR_EMAIL_NOT_FOUND.type
-    );
-    expect(response.body.error).toBe(
-      formatString(authLogs.LOGIN_ERROR_EMAIL_NOT_FOUND.message, { email })
-    );
-  });
-});
-describe("Test login with email existe and invalid password", () => {
-  test("It should response with Error response type : ERROR_INVALID_INPUT ", async () => {
-    const response = await request(app).post(route).send({
-      email: "badlamoussaab@gmail.com",
-      password: RandomString(),
+      password: TEST_PASSWORD,
     });
     expect(response.status).toBe(HttpCodes.Unauthorized.code);
     expect(response.body.status).toBe("error");
-    expect(response.body.error).toBe(
-      formatString(authLogs.LOGIN_ERROR_INCORRECT_PASSWORD_FOUND.message, {
-        email: "badlamoussaab@gmail.com",
-      })
-    );
+    expect(response.body.message).toBe("LOGIN_ERROR");
+    expect(response.body.error).toBe("Invalid email or password");
+  });
+});
+describe("Test login with email exists and invalid password", () => {
+  test("It should response with generic error to prevent user enumeration", async () => {
+    const response = await request(app).post(route).send({
+      email: "badlamoussaab@gmail.com",
+      password: "WrongPass@123",
+    });
+    expect(response.status).toBe(HttpCodes.Unauthorized.code);
+    expect(response.body.status).toBe("error");
+    expect(response.body.message).toBe("LOGIN_ERROR");
+    expect(response.body.error).toBe("Invalid email or password");
   });
 });
 

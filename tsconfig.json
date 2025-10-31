@@ -1,23 +1,44 @@
 {
     "compilerOptions": {
       "target": "ES2021",
-      "lib": ["es2021", "dom"],
+      "lib": ["es2021"],
       "module": "commonjs",
       "rootDir": "src",
-      "baseUrl": "src",
+      "baseUrl": ".",
+      "paths": {
+        "@/*": ["src/*"],
+        "@/config/*": ["src/config/*"],
+        "@/controller/*": ["src/controller/*"],
+        "@/db/*": ["src/db/*"],
+        "@/middleware/*": ["src/middleware/*"],
+        "@/routes/*": ["src/routes/*"],
+        "@/services/*": ["src/services/*"],
+        "@/types/*": ["src/types/*"],
+        "@/utils/*": ["src/utils/*"],
+        "@/test/*": ["src/test/*"]
+      },
       "outDir": "./dist",
       "esModuleInterop": true,
       "forceConsistentCasingInFileNames": true,
       "strict": true,
-      "skipLibCheck": false,
+      "skipLibCheck": true,
       "experimentalDecorators": true,
       "emitDecoratorMetadata": true,
-      "resolveJsonModule": true
+      "resolveJsonModule": true,
+      "noUnusedLocals": false,
+      "noUnusedParameters": false,
+      "noImplicitReturns": true,
+      "noFallthroughCasesInSwitch": true,
+      "moduleResolution": "node",
+      "sourceMap": true,
+      "declaration": true,
+      "declarationMap": true
     },
     "typedocOptions": {
       "entryPoints": ["src/index.ts"],
       "out": "docs"
     },
-    "include": ["src", "src/test",],
+    "include": ["src", "src/test"],
+    "exclude": ["node_modules", "dist"]
 }
   

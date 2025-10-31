@@ -1,6 +1,14 @@
 declare interface MyPayload {
 	_id: string;
 	role: "admin" | "user" | "judge";
+	type?: "access" | "refresh";
+	exp?: number;
+	iat?: number;
+}
+
+declare interface TokenPair {
+	accessToken: string;
+	refreshToken: string;
 }
 
 

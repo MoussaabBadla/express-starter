@@ -54,10 +54,8 @@ describe("Test the authback route with invalid token ", () => {
       .get(route)
       .set("authorization", "Bearer " + RandomString());
 
-    expect(response.status).toBe(HttpCodes.InternalServerError.code);
+    expect(response.status).toBe(HttpCodes.Unauthorized.code);
     expect(response.body.status).toBe("error");
-    expect(response.body.message).toBe(
-      authLogs.ERROR_WHILE_CHECKING_CREDENTIALS.message
-    );
+    expect(response.body.message).toBe("Invalid token");
   });
 });

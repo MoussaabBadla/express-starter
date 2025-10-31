@@ -1,71 +1,93 @@
-// import path from "path";
-
 import path from "path";
-import { log } from "../utils/Function";
+import { validateEnv } from "./envValidation";
 
 /**
- * @description Checks the value of an environment field and logs the result.
- *
- * @param {string} envField - The name of the environment field to check.
- * @param {string} replacedBy - The value to replace if the environment field is undefined.
- * @returns {string} The value of the environment field or the replacement value if undefined.
+ * Validate environment variables on module load
+ * This ensures all required variables are present before the app starts
  */
-function CheckEnv(envField: string, replacedBy: string): string {
-	const value = process.env[envField];
-	
-	if (value) {
-		log(`🟢 Checking env field => '${envField}' : ${process.env[envField]}`);
-		return value;
-	}
-	log(`🟡 Checking env field => '${envField}' : 'undefined' Replaced by => ${replacedBy}`);
-	return replacedBy;
-}
-
-log("---------------------------- Replaceable ENV ----------------------------");
+validateEnv();
 
 /**
- * @description The current working directory of the project.
+ * Helper function to get env var with default value
+ */
+const getEnv = (key: string, defaultValue: string): string => {
+	return process.env[key] || defaultValue;
+};
+
+// ============================================
+// REQUIRED Environment Variables (validated by Joi)
+// ============================================
+
+/**
+ * MongoDB connection URI (REQUIRED)
+ */
+export const MONGODB_URI = process.env.BACK_MONGODB_URI as string;
+
+/**
+ * MongoDB database name (REQUIRED)
+ */
+export const MONGODB_NAME = process.env.BACK_MONGODB_NAME as string;
+
+/**
+ * JWT secret key for token signing (REQUIRED, min 32 chars)
+ */
+export const JWT_SECRET = process.env.BACK_SECRET as string;
+
+/**
+ * Email username for sending emails (REQUIRED)
+ */
+export const EmailUser = process.env.BACK_EmailUser as string;
+
+/**
+ * Email password for authentication (REQUIRED)
+ */
+export const EmailPass = process.env.BACK_EmailPass as string;
+
+// ============================================
+// OPTIONAL Environment Variables (with defaults)
+// ============================================
+
+/**
+ * The current working directory of the project.
  */
 export const CWD = process.cwd();
-log(`🔵 The project started from ${CWD}`);
 
 /**
- * @description Flag indicating if the application is in development mode.
+ * Flag indicating if the application is in development mode.
  * @default true
  */
-export const InDev = CheckEnv("IN_PROD", "false") === "false";
+export const InDev = getEnv("IN_PROD", "false") === "false";
 
 /**
- * @description The default port number if the 'BACK_PORT' environment variable is not set.
+ * The default port number if the 'BACK_PORT' environment variable is not set.
  * @default "8080"
  */
-export const PORT = CheckEnv("BACK_PORT", "8080");
+export const PORT = getEnv("BACK_PORT", "8080");
 
 
 /**
- * @description The domain name of the platform. If 'DOMAIN' is not set, it defaults to 'storming-ai.app'
+ * The domain name of the platform.
  * @default "storming-ai.app"
- * 
  */
-export const DOMAIN = CheckEnv("DOMAIN", "storming-ai.app");
+export const DOMAIN = getEnv("DOMAIN", "storming-ai.app");
 
 /**
- * @description The URL of the backend. If 'BACK_URL' is not set, it defaults to 'http://localhost:PORT' in development mode and 'https://storming-ai.app' in production mode.
+ * The URL of the backend.
  * @default value (InDev ? "http://localhost:" + PORT : "https://back.{DOMAIN}")
  */
-export const BACK_URL = CheckEnv("BACK_URL", InDev ? "http://localhost:" + PORT : `https://back.${DOMAIN}`);
+export const BACK_URL = getEnv("BACK_URL", InDev ? "http://localhost:" + PORT : `https://back.${DOMAIN}`);
 
 /**
- * @description The URL of the frontend app. If 'FRONT_URL' is not set, it defaults to 'http://localhost:PORT' in development mode and 'https://${DOMAIN}' in production mode.
+ * The URL of the frontend app.
  * @default value (InDev ? "http://localhost:" + PORT : "https://{DOMAIN}")
  */
-export const FRONT_URL = CheckEnv("FRONT_URL", InDev ? "http://localhost:" + PORT : `https://${DOMAIN}`);
+export const FRONT_URL = getEnv("FRONT_URL", InDev ? "http://localhost:" + PORT : `https://${DOMAIN}`);
 
 /**
- * @description The URL of the frontend of the admin app. If 'ADMIN_URL' is not set, it defaults to 'http://localhost:PORT' in development mode and 'https://admin.${DOMAIN}' in production mode.
- * @default value (InDev ? "http://localhost:" + PORT : "https://{DOMAIN}")
+ * The URL of the frontend of the admin app.
+ * @default value (InDev ? "http://localhost:" + PORT : "https://admin.${DOMAIN}")
  */
-export const ADMIN_URL = CheckEnv("ADMIN_URL", InDev ? "http://localhost:" + PORT : `https://admin.${DOMAIN}`);
+export const ADMIN_URL = getEnv("ADMIN_URL", InDev ? "http://localhost:" + PORT : `https://admin.${DOMAIN}`);
 
 /**
  * @description The route used for serving media files.
@@ -80,69 +102,80 @@ export const MediaRoute = "/media";
 export const MediaURL = `${BACK_URL}${MediaRoute}`;
 
 /**
- * @description The URL of the main page of the platform.
- * @default "FRONT_URL"
+ * The URL of the main page of the platform.
+ * @default FRONT_URL
  */
-export const MAIN_URL = CheckEnv("MAIN_URL", "FRONT_URL");
-
-
-
+export const MAIN_URL = getEnv("MAIN_URL", FRONT_URL);
 
 /**
- * @description The developer's email address.
+ * The developer's email address.
  * @default "badlamoussaab@gmail.com"
  */
-export const DEV_Email = CheckEnv("DEV_Email", "badlamoussaab@gmail.com");
+export const DEV_Email = getEnv("DEV_Email", "badlamoussaab@gmail.com");
 
 /**
- * @description The port used for email communication.
+ * The port used for email communication.
  * @default "465"
  */
-export const EmailPort = CheckEnv("BACK_EmailPort", "465");
+export const EmailPort = getEnv("BACK_EmailPort", "465");
 
 /**
- * @description The host used for email communication.
+ * The host used for email communication.
  * @default "smtp.gmail.com"
  */
-export const EmailHost = CheckEnv("BACK_EmailHost", "smtp.gmail.com");
-export const PROJECT_Name = CheckEnv("PROJECT_Name", "Storming AI");
-
+export const EmailHost = getEnv("BACK_EmailHost", "smtp.gmail.com");
 
 /**
- * @description The root directory where log files are stored.
- * @default value path.join(CWD, "logs")
+ * Project name
+ * @default "Storming AI"
  */
-export const LogsRoot = CheckEnv("LogsRoot", path.join(CWD, "logs"));
+export const PROJECT_Name = getEnv("PROJECT_Name", "Storming AI");
 
 /**
- * @description The root directory where static files are stored.
- * @default value path.join(CWD, "tmp")
+ * The root directory where log files are stored.
+ * @default path.join(CWD, "logs")
  */
-export const StaticRoot = CheckEnv("STATIC", path.join(CWD, "tmp"));
+export const LogsRoot = getEnv("LogsRoot", path.join(CWD, "logs"));
 
 /**
- * @description The cache age of static files
- * @default 2592000
- * aka 30 days
+ * The root directory where static files are stored.
+ * @default path.join(CWD, "tmp")
  */
-export const Static_Cache_Age = Number(CheckEnv("Static_Cache_Age", "2592000"));
+export const StaticRoot = getEnv("STATIC", path.join(CWD, "tmp"));
 
 /**
- * @description The maximum duration (in seconds) before the application times out and exits.
+ * The cache age of static files
+ * @default 2592000 (30 days)
  */
-export const TimeOutExit = Number(CheckEnv("TimeOutExit", "0"));
+export const Static_Cache_Age = Number(getEnv("Static_Cache_Age", "2592000"));
 
-export const NODE_ENV = CheckEnv("NODE_ENV", "development");
+/**
+ * The maximum duration (in seconds) before the application times out and exits.
+ */
+export const TimeOutExit = Number(getEnv("TimeOutExit", "0"));
+
+/**
+ * Node environment
+ */
+export const NODE_ENV = getEnv("NODE_ENV", "development");
+
+/**
+ * Flag indicating if running in test mode
+ */
 export const InTest = NODE_ENV === "test";
-export const ORIGINS = CheckEnv("ORIGINS", FRONT_URL);
 
 /**
- * @description The maximum file size (in bytes) that can be uploaded.
- * @default 5242880
- * aka 5MB
+ * Allowed CORS origins
  */
-export const sizeLimit = Number(CheckEnv("BACK_SIZE_LIMIT", "5242880"));
+export const ORIGINS = getEnv("ORIGINS", FRONT_URL);
 
-export const GENERATION_API_URL = CheckEnv("GENERATION_API_URL", "http://127.0.0.1:8000");
+/**
+ * The maximum file size (in bytes) that can be uploaded.
+ * @default 5242880 (5MB)
+ */
+export const sizeLimit = Number(getEnv("BACK_SIZE_LIMIT", "5242880"));
 
-log("--------------------------------------------------------\n");
+/**
+ * Generation API URL
+ */
+export const GENERATION_API_URL = getEnv("GENERATION_API_URL", "http://127.0.0.1:8000");

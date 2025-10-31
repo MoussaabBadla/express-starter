@@ -10,23 +10,22 @@ export async function exitProcess(code: ICode, moreData: Record<string, string> 
 
 	logger.error(message, { code: exitCode.code, type: "ExitCode" });
 
-	console.error(`📛 Exiting with code: ${exitCode.code}`);
-	console.error("❌ Reason:", message);
+	logger.error(`📛 Exiting with code: ${exitCode.code}`);
+	logger.error("❌ Reason:", message);
 	if (!InDev) {
-		const email = { text: " `${PROJECT_Name} ❌ Back-end shutdown unexpectedly " + exitCode.code };
-		await SendEmail({
-			to: DEV_Email,
-			subject: `${PROJECT_Name} Back-end shutdown unexpectedly`,
-			...email,
-		})
-			.then(() => {
-				process.exit(exitCode.code);
-			})
-			.catch((err) => {
-				console.error("❌ => Sending email on exit :", err);
+		try {
+			const emailText = `${PROJECT_Name} ❌ Back-end shutdown unexpectedly with code ${exitCode.code}\n\nReason: ${message}`;
+			await SendEmail({
+				to: DEV_Email,
+				subject: `${PROJECT_Name} Back-end shutdown unexpectedly`,
+				text: emailText,
 			});
-	} else {
-		process.exit(exitCode.code);
+			logger.info("Exit notification email sent successfully");
+		} catch (err) {
+			logger.error("Failed to send exit notification email:", err);
+			// Don't prevent exit if email fails
+		}
 	}
+	process.exit(exitCode.code);
 }
 

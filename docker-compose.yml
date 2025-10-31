@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # Redis service for caching and rate limiting
+  redis:
+    image: redis:7-alpine
+    container_name: express-starter-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # MongoDB service
+  mongodb:
+    image: mongo:7
+    container_name: express-starter-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+      - mongo_config:/data/configdb
+    environment:
+      - MONGO_INITDB_DATABASE=zeref
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Development application service (optional - for containerized dev)
+  app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: express-starter-app-dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/home/node/app
+      - /home/node/app/node_modules
+      - ./logs:/home/node/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - REDIS_HOST=redis
+      - BACK_MONGODB_URI=mongodb://mongodb:27017/zeref
+    networks:
+      - app-network
+    restart: unless-stopped
+    command: npm run dev
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local
+  mongo_data:
+    driver: local
+  mongo_config:
+    driver: local

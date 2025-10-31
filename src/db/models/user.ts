@@ -22,6 +22,13 @@ const usersSchema = new Schema<UserI>(
     password: { type: String, required },
     role: { type: String, enum: ["admin", "user"], default: "user" },
     enable: { type: Boolean, default: true },
+	emailVerified: { type: Boolean, default: false },
+	verificationToken: { type: String, default: null },
+	verificationTokenExpires: { type: Date, default: null },
+	accountStatus: { type: String, enum: ["active", "locked", "deleted"], default: "active" },
+	lockedAt: { type: Date, default: null },
+	lockedReason: { type: String, default: null },
+	deletedAt: { type: Date, default: null },
   },
   {
     timestamps: true,
@@ -31,12 +38,41 @@ const usersSchema = new Schema<UserI>(
 
 usersSchema.index({ email: 1 }, { unique: true });
 
+/**
+ * Validate password strength
+ * - At least 8 characters
+ * - At least one uppercase letter
+ * - At least one lowercase letter
+ * - At least one number
+ * - At least one special character
+ */
+function validatePasswordStrength(password: string): { valid: boolean; message?: string } {
+  if (password.length < 8) {
+    return { valid: false, message: "Password must be at least 8 characters long" };
+  }
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, message: "Password must contain at least one uppercase letter" };
+  }
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, message: "Password must contain at least one lowercase letter" };
+  }
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, message: "Password must contain at least one number" };
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    return { valid: false, message: "Password must contain at least one special character" };
+  }
+  return { valid: true };
+}
+
 usersSchema.pre("save", async function (next) {
   try {
     if (this.isNew || this.isModified("password")) {
-      if (this.password.length < 8)
-        throw new Error("Password must be at least 8 characters long");
-      this.password = await bcrypt.hash(this.password, 10);
+      const validation = validatePasswordStrength(this.password);
+      if (!validation.valid) {
+        throw new Error(validation.message);
+      }
+      this.password = await bcrypt.hash(this.password, 12); // Increased salt rounds from 10 to 12
     }
     next();
   } catch (err) {
@@ -79,7 +115,7 @@ export const createUserFactory = async (
     firstName: props.firstName || "John",
     lastName: props.lastName || "Doe",
     email: props.email || RandomEmail(),
-    password: props.password || "password",
+    password: props.password || "Test@1234", // Strong default password for testing
     role: props.role || "user",
   });
   const savedUser = await user.save();
